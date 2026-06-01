@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0d1117"/>
+<title>LB Drill Library — Inside/MIKE Linebacker</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --surface3: #2d333b;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #6e7681;
+  /* Team colors */
+  --orange: #f97316;
+  --orange-dark: #ea6c0a;
+  --orange-glow: rgba(249,115,22,.12);
+  --blue: #3b82f6;
+  --blue-dark: #2563eb;
+  --blue-glow: rgba(59,130,246,.12);
+  --accent: var(--orange);
+}
+
+html { -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── HEADER ─── */
+header {
+  background: linear-gradient(160deg, #0d1117 0%, #161b22 60%, #0d1117 100%);
+  border-bottom: 1px solid var(--border);
+  padding: clamp(20px,4vw,36px) 20px clamp(18px,3vw,28px);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 0%, var(--orange-glow) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 70% 0%, var(--blue-glow) 0%, transparent 60%);
+  pointer-events: none;
+}
+.header-badge {
+  display: inline-block;
+  background: rgba(249,115,22,.15);
+  border: 1px solid rgba(249,115,22,.35);
+  color: var(--orange);
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+}
+header h1 { font-size: clamp(22px, 6vw, 40px); font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+header h1 .c-orange { color: var(--orange); }
+header h1 .c-blue   { color: var(--blue); }
+header p { color: var(--text-muted); font-size: clamp(12px,2.5vw,14px); margin-top: 6px; }
+.stat-row { display: flex; justify-content: center; gap: clamp(14px,3vw,28px); margin-top: 16px; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat-num { font-size: clamp(17px,4vw,22px); font-weight: 800; line-height: 1; }
+.stat-num.orn { color: var(--orange); }
+.stat-num.blu { color: var(--blue); }
+.stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+/* ─── TAB NAV ─── */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 16px;
+  position: sticky; top: 0; z-index: 200;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: clamp(12px,3.5vw,14px); font-weight: 600;
+  padding: 13px clamp(12px,3vw,20px);
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+.tab-count {
+  background: var(--surface2);
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 10px;
+  color: var(--text-dim);
+}
+
+/* ─── DRILLS CONTROLS ─── */
+.controls {
+  position: sticky; top: 47px; z-index: 100;
+  background: rgba(13,17,23,.97);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+}
+.search-wrap { max-width: 480px; margin: 0 auto 10px; position: relative; }
+.search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
+#search {
+  width: 100%;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 15px;
+  padding: 10px 12px 10px 36px; outline: none;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+}
+#search:focus { border-color: var(--orange); }
+#search::placeholder { color: var(--text-dim); }
+
+.filter-bar {
+  display: flex; gap: 6px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; padding-bottom: 2px;
+}
+.filter-bar::-webkit-scrollbar { display: none; }
+.filter-btn {
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text-muted); font-size: 12px; font-weight: 600;
+  padding: 6px 12px; border-radius: 20px; cursor: pointer;
+  transition: all .15s; white-space: nowrap; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 32px;
+}
+.filter-btn:hover { border-color: #555; color: var(--text); }
+.filter-btn.active { color: #fff; border-color: transparent; font-weight: 700; }
+
+/* ─── RESULTS BAR ─── */
+.results-bar {
+  max-width: 1280px; margin: 12px auto 0; padding: 0 16px;
+  font-size: 12px; color: var(--text-dim);
+}
+
+/* ─── GRID ─── */
+.grid {
+  max-width: 1280px; margin: 0 auto;
+  padding: 12px 14px 80px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+
+/* ─── CARD ─── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 15px;
+  display: flex; flex-direction: column;
+  transition: border-color .2s, transform .18s, box-shadow .18s;
+  position: relative; overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* Ensure min touch target height */
+  min-height: 120px;
+}
+.card:hover { border-color: #555; }
+@media (hover: hover) {
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+}
+.card:active { transform: scale(.99); }
+.card-accent-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 12px 12px 0 0; }
+.card-header { display: flex; align-items: flex-start; gap: 5px; margin-bottom: 7px; flex-wrap: wrap; }
+.cat-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0;
+}
+.pleester-badge {
+  font-size: 9px; font-weight: 600; padding: 3px 7px; border-radius: 4px;
+  background: rgba(255,255,255,.07); color: var(--text-dim);
+  border: 1px solid var(--border); white-space: nowrap; flex-shrink: 0;
+}
+.card-title { font-size: 14px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; color: var(--text); }
+.card-desc {
+  font-size: 12.5px; color: var(--text-muted); line-height: 1.55; flex: 1; margin-bottom: 11px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+.card-source { font-size: 10px; color: var(--text-dim); font-style: italic; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-watch {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--orange); color: #fff;
+  font-size: 11.5px; font-weight: 700; padding: 6px 12px; border-radius: 7px;
+  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+  transition: background .15s; min-height: 32px;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-watch:hover { background: var(--orange-dark); }
+.btn-no-video {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 11px; font-weight: 600;
+  padding: 5px 9px; border-radius: 7px; white-space: nowrap; flex-shrink: 0;
+}
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+@media (min-width: 640px) {
+  .modal-overlay { align-items: center; padding: 20px; }
+}
+.modal-overlay.open { display: flex; animation: overlayIn .2s ease; }
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+  animation: sheetUp .25s cubic-bezier(.32,0,.67,0);
+  /* Safe area for iPhone notch */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (min-width: 640px) {
+  .modal { border-radius: 16px; max-width: 600px; animation: modalIn .2s ease; }
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes modalIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* Drag handle on mobile */
+.modal-handle {
+  width: 40px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 10px auto 0;
+}
+@media (min-width: 640px) { .modal-handle { display: none; } }
+
+.modal-accent { height: 4px; }
+@media (min-width: 640px) { .modal-accent { border-radius: 16px 16px 0 0; } }
+
+.modal-body { padding: clamp(16px,4vw,24px); }
+.modal-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.modal-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.modal-close {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-muted); width: 36px; height: 36px; border-radius: 9px;
+  cursor: pointer; font-size: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s; -webkit-tap-highlight-color: transparent;
+  min-width: 36px;
+}
+.modal-close:hover { background: var(--surface3); color: var(--text); }
+.modal-title { font-size: clamp(17px,4.5vw,20px); font-weight: 800; line-height: 1.25; margin-bottom: 14px; }
+.modal-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px; }
+.modal-desc { font-size: clamp(13px,3.5vw,14.5px); color: var(--text-muted); line-height: 1.7; margin-bottom: 18px; }
+.modal-source { font-size: 12px; color: var(--text-dim); font-style: italic; margin-bottom: 18px; }
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-modal-watch {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--orange); color: #fff;
+  font-size: 14px; font-weight: 700; padding: 12px 22px; border-radius: 10px;
+  text-decoration: none; transition: background .15s;
+  min-height: 46px; flex: 1; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-modal-watch:hover { background: var(--orange-dark); }
+.btn-modal-no-video {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 13px; font-weight: 600;
+  padding: 11px 16px; border-radius: 10px; min-height: 46px;
+}
+.btn-modal-close-bottom {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 13px; font-weight: 600;
+  padding: 11px 18px; border-radius: 10px; cursor: pointer;
+  transition: background .15s; min-height: 46px;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-modal-close-bottom:hover { background: var(--surface3); }
+@media (max-width: 639px) {
+  .modal-actions { flex-direction: column; }
+  .btn-modal-watch, .btn-modal-close-bottom, .btn-modal-no-video { width: 100%; justify-content: center; }
+}
+
+/* ─── EMPTY STATE ─── */
+.empty { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-dim); }
+.empty h3 { font-size: 17px; color: var(--text-muted); margin: 12px 0 5px; }
+
+/* ─── WEEKLY PLAN ─── */
+.weekly-wrap { max-width: 960px; margin: 0 auto; padding: clamp(16px,4vw,32px) clamp(14px,4vw,24px) 80px; }
+.weekly-intro {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px; margin-bottom: 28px;
+  border-left: 4px solid var(--orange);
+}
+.weekly-intro h2 { font-size: clamp(15px,4vw,18px); font-weight: 700; margin-bottom: 7px; color: var(--orange); }
+.weekly-intro p { font-size: clamp(12.5px,3vw,14px); color: var(--text-muted); line-height: 1.65; }
+.week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%,280px),1fr)); gap: 14px; }
+.day-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.day-header { padding: 13px 16px; display: flex; align-items: center; gap: 9px; }
+.day-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.day-name { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.day-theme { font-size: 10.5px; color: var(--text-dim); margin-left: auto; text-align: right; }
+.day-body { padding: 0 16px 14px; }
+.day-segment { margin-bottom: 12px; }
+.day-segment-label { font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 5px; display: block; }
+.day-drill-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.day-drill-item { font-size: 12px; color: var(--text-muted); background: var(--surface2); border-radius: 5px; padding: 5px 9px; display: flex; align-items: center; gap: 6px; }
+.dot5 { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+.principles-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,250px),1fr)); gap: 12px; margin-top: 28px; }
+.principle-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 15px; }
+.principle-icon { font-size: 20px; margin-bottom: 7px; }
+.principle-title { font-size: clamp(13px,3.5vw,14px); font-weight: 700; margin-bottom: 5px; }
+.principle-text { font-size: clamp(11.5px,3vw,12.5px); color: var(--text-muted); line-height: 1.6; }
+.section-heading { font-size: 15px; font-weight: 700; margin: 26px 0 12px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.section-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ─── GLOSSARY ─── */
+.glossary-wrap { max-width: 900px; margin: 0 auto; padding: clamp(16px,4vw,32px) clamp(14px,4vw,24px) 80px; }
+.glossary-search-wrap { max-width: 460px; margin: 0 auto 20px; position: relative; }
+.glossary-search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-dim); pointer-events: none; }
+#glossary-search {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 15px;
+  padding: 10px 12px 10px 36px; outline: none; transition: border-color .2s;
+  -webkit-appearance: none;
+}
+#glossary-search:focus { border-color: var(--blue); }
+#glossary-search::placeholder { color: var(--text-dim); }
+.glossary-section { margin-bottom: 24px; }
+.glossary-letter { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.glossary-terms { display: flex; flex-direction: column; gap: 7px; }
+.glossary-term { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.term-name { font-size: clamp(13px,3.5vw,14px); font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.term-category { font-size: 9.5px; font-weight: 600; letter-spacing: .7px; text-transform: uppercase; color: var(--blue); margin-bottom: 5px; display: block; }
+.term-def { font-size: clamp(12px,3vw,13px); color: var(--text-muted); line-height: 1.6; }
+
+/* ─── UTILITY ─── */
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-badge">Inside / MIKE Linebacker</div>
+  <h1>LB <span class="c-orange">Drill</span> <span class="c-blue">Library</span></h1>
+  <p>Organized by skill bucket · External coaching sources + Zac Pleester playbook</p>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-num orn">92</div><div class="stat-label">Total Drills</div></div>
+    <div class="stat"><div class="stat-num blu">47</div><div class="stat-label">With Video</div></div>
+    <div class="stat"><div class="stat-num orn">8</div><div class="stat-label">Skill Buckets</div></div>
+    <div class="stat"><div class="stat-num blu">45</div><div class="stat-label">Playbook Drills</div></div>
+  </div>
+</header>
+
+<!-- TAB NAV -->
+<nav class="tab-nav" role="tablist">
+  <button class="tab-btn active" data-tab="drills" role="tab" aria-selected="true">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Drills <span class="tab-count">92</span>
+  </button>
+  <button class="tab-btn" data-tab="weekly" role="tab" aria-selected="false">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    Weekly Plan
+  </button>
+  <button class="tab-btn" data-tab="glossary" role="tab" aria-selected="false">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    Glossary <span class="tab-count" id="gloss-count">50</span>
+  </button>
+</nav>
+
+<!-- ══════ DRILLS TAB ══════ -->
+<div id="tab-drills" role="tabpanel">
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="search" type="search" placeholder="Search drills…" autocomplete="off" autocorrect="off" spellcheck="false"/>
+    </div>
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-btn active" data-cat="All" style="background:var(--orange);border-color:var(--orange);color:#fff;">All</button>
+      <button class="filter-btn" data-cat="Pass Coverage &amp; Zone Drops">Pass Coverage</button>
+      <button class="filter-btn" data-cat="Man Coverage">Man Coverage</button>
+      <button class="filter-btn" data-cat="Run Fits &amp; Block Shedding">Run Fits</button>
+      <button class="filter-btn" data-cat="Tackling Technique">Tackling</button>
+      <button class="filter-btn" data-cat="Pursuit &amp; Pad Level">Pursuit</button>
+      <button class="filter-btn" data-cat="Footwork &amp; Change of Direction">Footwork</button>
+      <button class="filter-btn" data-cat="Blitzing">Blitzing</button>
+      <button class="filter-btn" data-cat="Key &amp; Diagnose">Key &amp; Diagnose</button>
+    </div>
+  </div>
+  <div class="results-bar"><span id="results-count"></span></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ══════ WEEKLY PLAN TAB ══════ -->
+<div id="tab-weekly" class="hidden" role="tabpanel">
+  <div class="weekly-wrap">
+    <div class="weekly-intro">
+      <h2>Building Your Weekly Practice Menu</h2>
+      <p>A productive weekly rhythm for a MIKE is: one <strong>block-destruction progression</strong> daily, one <strong>movement / change-of-direction circuit</strong>, and one <strong>integrated situational period</strong> that layers coverage or blitzing onto a read. Tackling circuits belong in team warm-ups, and the Program Pursuit Drill is the highest-leverage five minutes a defense can spend.</p>
+    </div>
+    <div class="section-heading">5-Day Practice Structure</div>
+    <div class="week-grid">
+
+      <div class="day-card">
+        <div class="day-header" style="background:rgba(59,130,246,.1);border-bottom:1px solid rgba(59,130,246,.2);">
+          <div class="day-dot" style="background:#3b82f6;"></div>
+          <span class="day-name" style="color:#3b82f6;">Monday</span>
+          <span class="day-theme">Pass Coverage Install</span>
+        </div>
+        <div class="day-body">
+          <div class="day-segment"><span class="day-segment-label">Warm-Up (10 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>LB Stance &amp; Start</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>Footwork Basics (5-Progression)</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Individual (20 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>Zone Drop and Drift Drill</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>Hook/Curl Drop Drill</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>Hug Drop (Pleester)</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Group (15 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>4-LB Zone Drop / Ball-Out-Break Drill</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#3b82f6;"></div>SLICE / Wall Technique</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header" style="background:rgba(249,115,22,.1);border-bottom:1px solid rgba(249,115,22,.2);">
+          <div class="day-dot" style="background:var(--orange);"></div>
+          <span class="day-name" style="color:var(--orange);">Tuesday</span>
+          <span class="day-theme">Run Fits &amp; Reads</span>
+        </div>
+        <div class="day-body">
+          <div class="day-segment"><span class="day-segment-label">Warm-Up (10 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Program Pursuit Drill (team)</li>
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Bag and Cut Work</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Block Destruction (15 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Shock / Lock / Shed Board Drill</li>
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Get Off Block on Sled (Pleester)</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Reads (20 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Flow Drill (Pleester)</li>
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Cloudy to Clear Footwork</li>
+              <li class="day-drill-item"><div class="dot5" style="background:var(--orange);"></div>Half-Line Read (Pleester)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header" style="background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.2);">
+          <div class="day-dot" style="background:#ef4444;"></div>
+          <span class="day-name" style="color:#ef4444;">Wednesday</span>
+          <span class="day-theme">Tackling &amp; Pursuit</span>
+        </div>
+        <div class="day-body">
+          <div class="day-segment"><span class="day-segment-label">Warm-Up (10 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Every-Day LB Trigger, Track &amp; Tackle</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Downhill Shuffle Drill</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Tackling Circuit (20 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Hawk / Profile / Compression Circuit</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Lane Tackling (Pleester)</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Vice Drill (Pleester)</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Pursuit (15 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Six-Cone Pursuit Drill</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ef4444;"></div>Knowles LB Angle Pursuit</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header" style="background:rgba(236,72,153,.1);border-bottom:1px solid rgba(236,72,153,.2);">
+          <div class="day-dot" style="background:#ec4899;"></div>
+          <span class="day-name" style="color:#ec4899;">Thursday</span>
+          <span class="day-theme">Pressure &amp; Blitz</span>
+        </div>
+        <div class="day-body">
+          <div class="day-segment"><span class="day-segment-label">Warm-Up (10 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>LB Movement Mechanics (Bag Progression)</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>Fit-to-Start Sled Shed Drill</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Blitz Install (20 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>Carolina Panthers Blitz — "Get Skinny"</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>Duffner LB Blitz Rush Mechanics</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>Double A-Gap "Addy" Pressure Reps</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Key &amp; Diagnose (15 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>Clear/Cloudy Gap Control</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#ec4899;"></div>Four Basic Guard Keys</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-header" style="background:rgba(34,197,94,.1);border-bottom:1px solid rgba(34,197,94,.2);">
+          <div class="day-dot" style="background:#22c55e;"></div>
+          <span class="day-name" style="color:#22c55e;">Friday</span>
+          <span class="day-theme">Integration &amp; Competitive</span>
+        </div>
+        <div class="day-body">
+          <div class="day-segment"><span class="day-segment-label">Daily Foundation (10 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>Program Pursuit Drill (team)</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>Guard-Read Reaction Drill</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Competition Period (25 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>Play Reaction (Pleester) — vs. live QB</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>Shed, Shed, Wrap (Pleester)</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>Engaged Tackling Drill</li>
+            </ul>
+          </div>
+          <div class="day-segment"><span class="day-segment-label">Man Coverage (10 min)</span>
+            <ul class="day-drill-list">
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>LB M/M vs. RB — Duffner Package</li>
+              <li class="day-drill-item"><div class="dot5" style="background:#22c55e;"></div>Man Technique vs. RB &amp; TE</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /week-grid -->
+
+    <div class="section-heading">Daily Non-Negotiables</div>
+    <div class="principles-grid">
+      <div class="principle-card" style="border-left:3px solid var(--orange);">
+        <div class="principle-icon">🏋️</div>
+        <div class="principle-title">Block Destruction (daily)</div>
+        <div class="principle-text">Rotate: Shock/Lock/Shed Board → Button Press &amp; Pop-Off → Get Off Block on Sled. Never skip — block destruction is the foundation every other skill is built on.</div>
+      </div>
+      <div class="principle-card" style="border-left:3px solid var(--blue);">
+        <div class="principle-icon">👟</div>
+        <div class="principle-title">Movement Circuit (daily)</div>
+        <div class="principle-text">Knowles Bag Progression or Glazier Six-Drill Circuit on odd days; Pleester Footwork Basics (5-Progression) or Combo Bag Drill on even days. Keep hips square, eliminate the crossover.</div>
+      </div>
+      <div class="principle-card" style="border-left:3px solid #ef4444;">
+        <div class="principle-icon">🎯</div>
+        <div class="principle-title">Program Pursuit (every practice)</div>
+        <div class="principle-text">5 minutes. Scout offense on air. Ball hits 25-yard cone ℔ all 11 sprint into hat-around in 4–6 seconds or repeat. The highest-leverage five minutes a defense can spend.</div>
+      </div>
+      <div class="principle-card" style="border-left:3px solid var(--blue);">
+        <div class="principle-icon">👁️</div>
+        <div class="principle-title">Eyes Before Feet</div>
+        <div class="principle-text">MIKE's greatest accelerator is the speed of his eyes. Half-Line Read and Play Reaction must come after block destruction so reads feed run fits directly, not the other way.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ GLOSSARY TAB ══════ -->
+<div id="tab-glossary" class="hidden" role="tabpanel">
+  <div class="glossary-wrap">
+    <div class="glossary-search-wrap">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="glossary-search" type="search" placeholder="Search terms…" autocorrect="off" spellcheck="false"/>
+    </div>
+    <div id="glossary-list"></div>
+  </div>
+</div>
+
+<!-- ══════ MODAL ══════ -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-accent" id="modal-accent"></div>
+    <div class="modal-body">
+      <div class="modal-top">
+        <div class="modal-badges" id="modal-badges"></div>
+        <button class="modal-close" id="modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-label">Description</div>
+      <div class="modal-desc" id="modal-desc"></div>
+      <div class="modal-label" id="modal-source-label"></div>
+      <div class="modal-source" id="modal-source"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CAT_COLORS = {
+  "Pass Coverage & Zone Drops": "#3b82f6",
+  "Man Coverage": "#8b5cf6",
+  "Run Fits & Block Shedding": "#f97316",
+  "Tackling Technique": "#ef4444",
+  "Pursuit & Pad Level": "#f59e0b",
+  "Footwork & Change of Direction": "#22c55e",
+  "Blitzing": "#ec4899",
+  "Key & Diagnose": "#06b6d4"
+};
+const DRILLS = [{"title": "Zone Drop and Drift Drill (Carolina Panthers / Luke Kuechly)", "category": "Pass Coverage & Zone Drops", "description": "ILB aligns 4–5 yards over a coach-QB with a WR simulated 12 yards downfield and 7 outside. On command he snaps his hips, drops to landmark, then drifts with the route while keeping eyes on the QB to break downhill on the throw. Built specifically for MLB-type range.", "source": "Source: YouTube — Frank Bartscheck (USA Football)", "link": "https://www.youtube.com/watch?v=KzPRb0nskVo", "is_pleester": false}, {"title": "Pattern-Match \"2-by-2\" Drop Drill", "category": "Pass Coverage & Zone Drops", "description": "LB maintains a 2-yards-in-front, 2-yards-inside relationship to #2 while shuffling in the Control phase, then crossover-runs in the Speed phase. After 12 yards he \"packs the seams/hooks,\" vision-tracks the QB, and mixes in a \"lift and sift\" re-route with the long inside arm.", "source": "Source: YouTube — JJ Clark, DC, UTEP (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=mXrKwyFJ0gI", "is_pleester": false}, {"title": "4-LB Zone Drop / Ball-Out-Break Drill", "category": "Pass Coverage & Zone Drops", "description": "All four LBs align by formation vs. a coach-QB, drop to landmarks, and break on a downhill angle to the throw — with one LB finishing the interception every rep. Emphasizes eye discipline, clean landmark drops, and breaking on the ball across hash locations.", "source": "Source: https://youtu.be/2D-N0ZOJYIQ?si=RDn-Ksbp4T6YlRKl", "link": "https://youtu.be/2D-N0ZOJYIQ?si=RDn-Ksbp4T6YlRKl", "is_pleester": false}, {"title": "Hook/Curl Drop Drill", "category": "Pass Coverage & Zone Drops", "description": "LB opens hips off the snap, drops at a 45° angle to the hook/curl landmark, keeps depth on the inside shoulder of #2, drives feet to prevent drift, and breaks on the ball at release.", "source": "Source: https://youtu.be/-ckf-LiWYF8?si=EVULAhiR4U7b0s9T", "link": "https://youtu.be/-ckf-LiWYF8?si=EVULAhiR4U7b0s9T", "is_pleester": false}, {"title": "SLICE / Wall Technique for Match Coverages", "category": "Pass Coverage & Zone Drops", "description": "Teaches \"wall\" players — the MIKE and inside safety — to intercept the #2 vertical stem, then leverage and re-route the next route concept. Applies across Cover 3 match and quarter-match families.", "source": "Source: YouTube — Ashley Henley, LB Coach, Shiloh Christian", "link": "https://www.youtube.com/watch?v=RjMW2FuoWNw", "is_pleester": false}, {"title": "Hug Drop", "category": "Pass Coverage & Zone Drops", "description": "As RB flares out keep eyes on him and work laterally. As you see him turn for the ball accelerate to him correctly tracking the outside hip. Can work different RB routes — Flat, Wheel, Texas, Checkdown. Tag off at point of contact.", "source": null, "link": null, "is_pleester": true}, {"title": "Basic Hip Flip Drop", "category": "Pass Coverage & Zone Drops", "description": "Line up in front of coach. When the coach puts the ball out, start backpedaling. When the coach turns the ball over one side or the other, flip hips and continue dropping away. When the coach puts the ball high to pass, break forward and catch the ball on throw.", "source": null, "link": null, "is_pleester": true}, {"title": "Drop and React", "category": "Pass Coverage & Zone Drops", "description": "Drop to a spot and feel threat. Glance at QB while feeling threat. React to QB putting ball high to throw and run to intercept pass.", "source": null, "link": null, "is_pleester": true}, {"title": "Wall Drop", "category": "Pass Coverage & Zone Drops", "description": "Drop to the cone and get your eyes back to the QB. You can add a threat that moves once you are there to simulate following the route. Move the cones to simulate different dropping angles.", "source": null, "link": null, "is_pleester": true}, {"title": "Hot Drop", "category": "Pass Coverage & Zone Drops", "description": "Drop and react to QB platform breaking when the ball goes high.", "source": null, "link": null, "is_pleester": true}, {"title": "Stealing 2nd", "category": "Pass Coverage & Zone Drops", "description": "LB lines up in a line with the QB with two WRs 5 yards away on either side. LB reacts to QB platform and position and shuffles with it. When hands go high he breaks on the ball and intercepts it.", "source": null, "link": null, "is_pleester": true}, {"title": "Drop and Break", "category": "Pass Coverage & Zone Drops", "description": "Set up 3 cones starting at the back cone. Shuffle to the first cone, then to the second. Drop back to the back cone and break on the ball.", "source": null, "link": null, "is_pleester": true}, {"title": "LB M/M vs. RB + Step-Replace Re-Route (Duffner 5-Drill Package)", "category": "Man Coverage", "description": "Full coverage menu for inside linebackers — man technique vs. RB releases (flare, angle, wheel, check-release), Step-Replace re-route on crossers, plus Cover Down and 1/2-Line Teach drills. Video includes live corrections.", "source": "Source: YouTube — Mark Duffner, Cincinnati Bengals (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=TRTK5NfuhEI", "is_pleester": false}, {"title": "Underneath Coverage / Crosser Re-Route Drill (Hands-Behind-Back)", "category": "Man Coverage", "description": "LB drops at a 45° angle with hands clasped behind the back so he has to wall off the receiver with feet and hips alone. On vertical routes he fits outside hip to the WR's inside hip; on crossers he walls off with body positioning. Isolates footwork before hands contact.", "source": "Source: YouTube — Underneath Coverage Techniques vs. Crossers", "link": "https://www.youtube.com/watch?v=26Vkfkf1ulM", "is_pleester": false}, {"title": "Man Technique vs. RB & TE (Mirror / Hip Flip)", "category": "Man Coverage", "description": "Instructional breakdown of stance, mirror footwork on RB/TE releases, and clean hip flip to run with vertical routes (wheel/seam) at NFL speed.", "source": "Source: YouTube — Pat Schiller, ex-NFL LB", "link": "https://www.youtube.com/watch?v=AE-63ZrIWSg", "is_pleester": false}, {"title": "Button Press & Pop-Off Drill", "category": "Run Fits & Block Shedding", "description": "Against a one- or two-man sled the ILB begins in a fit position, executes a button press (thumbs up, elbows tight) and then \"pops off\" to track the ball. Emphasizes base, balance, and low pads — if the coach can't see the LB's helmet in the gap, he's reaching.", "source": "Source: YouTube — Archie McDaniel, Houston (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=GfciLkJOh3w", "is_pleester": false}, {"title": "Shock / Lock / Shed Board Drill", "category": "Run Fits & Block Shedding", "description": "ILB straddles a 1x6x14 board across from a blocker, working near-foot/near-shoulder — Shock (strike), Lock (extend and control), Shed (rip off to the ball). The board eliminates reaching across the body.", "source": "Source: YouTube — Greg Patterson, Hueytown HS (AL)", "link": "https://www.youtube.com/watch?v=Idyp4pzbMxo", "is_pleester": false}, {"title": "Fit-to-Start Sled Shed Drill (\"Tools\" Progression)", "category": "Run Fits & Block Shedding", "description": "ILB aligns a yard off a sled in heel-to-toe stagger, drives a power step, shocks with near leg/near shoulder, then tosses the sled past his body. Teaches first-step push-off, near-leg-before-shock sequencing, and the disengage.", "source": "Source: YouTube — Block Destruction Tools (AFCA Insider)", "link": "https://www.youtube.com/watch?v=1yY2c1JDtRY", "is_pleester": false}, {"title": "Wrist-Over-Wrist Head-Up Shed", "category": "Run Fits & Block Shedding", "description": "On the snap the LB presses the blocker, extends the outside arm long and pulls back with the trailing arm to attack the blocker's outside shoulder, eyes up on the ball carrier the whole way.", "source": "Source: YouTube — Michael Bruno, ILB Coach, Cal", "link": "https://www.youtube.com/watch?v=MVwfRdijKVI", "is_pleester": false}, {"title": "\"Fit → Hot Feet → Disengage\" Progression", "category": "Run Fits & Block Shedding", "description": "Four-phase build: (1) on knees, shoot hands on \"GO,\" (2) standing fit — low hips, outside foot into the gap, (3) add hot feet to squeeze and find the ball, (4) disengage with a RIP — outside hand pulls jersey while backside arm rips and back leg steps through.", "source": "Source: Jon Svec, DC, St. Francis Xavier", "link": "https://www.youtube.com/watch?v=YEonERPa55I", "is_pleester": false}, {"title": "LB Fill Drill (Tackle Tube)", "category": "Run Fits & Block Shedding", "description": "USA Football's Andy Ryland shows the ILB reading an O-line cue, filling the correct gap, and finishing with a downhill strike on the Tackle Tube — bridging pure fundamentals to gap fits.", "source": "Source: YouTube — Andy Ryland (USA Football)", "link": "https://www.youtube.com/watch?v=QVA8q1VY6vE", "is_pleester": false}, {"title": "Inside LB Run-Fit Film Study", "category": "Run Fits & Block Shedding", "description": "Full teach on ILB alignment (30-tech), guard-to-near-back keying, and how the Mike fits ISO inside-out while the Will cross-fills — including \"pull pull\" communication and cloudy-to-clear outside zone fits.", "source": "Source: YouTube — Nate Moore, Massillon Washington HS (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=c6SKHDAPi1I", "is_pleester": false}, {"title": "Get Off Block on Sled", "category": "Run Fits & Block Shedding", "description": "Shuffle steps downward and explode into bag. Hairline below chin, wrist and elbow together, thumbs up, lock elbows, hands above eyes. Rip, Arm Over, Drop Step.", "source": null, "link": null, "is_pleester": true}, {"title": "Negative Position", "category": "Run Fits & Block Shedding", "description": "Start engaged, coach acts as RB to go move and cut. Can cut back to cross face or keep moving on same side. Disengage when RB presents itself.", "source": null, "link": null, "is_pleester": true}, {"title": "From Leverage", "category": "Run Fits & Block Shedding", "description": "Shuffle with coaches point. When you have leverage, the O-Lineman will go. Use either a long arm + dip and rip or chop + dip and rip to defeat block. Track the bag and tackle.", "source": null, "link": null, "is_pleester": true}, {"title": "Avoid Butt Side", "category": "Run Fits & Block Shedding", "description": "LB lines up 4 yards away one gap over from OL. OL down blocks towards LB who shoots the gap and rips tight to the OL butt. Avoid drifting upfield past OL. Get to his butt and stay there.", "source": null, "link": null, "is_pleester": true}, {"title": "Cross Face", "category": "Run Fits & Block Shedding", "description": "OL down blocks away from LB. LB reacts and gets in front of OL using a cross chop to get past OL.", "source": null, "link": null, "is_pleester": true}, {"title": "Rip Through, Sit Behind", "category": "Run Fits & Block Shedding", "description": "LB and OL start 5 yards apart and go towards each other on an angle. LB will rip past OL focusing on not drifting too far upfield after. OL can pick different angles to go at each other with.", "source": null, "link": null, "is_pleester": true}, {"title": "Setting an Edge", "category": "Run Fits & Block Shedding", "description": "LB and OL start 5 yards apart and go towards each other on an angle. Set edge by moving OL back at the point of contact. Don’t get chest to chest with the OL. OL can pick different angles to go at each other with.", "source": null, "link": null, "is_pleester": true}, {"title": "Shed, Shed, Wrap", "category": "Run Fits & Block Shedding", "description": "LB lines up facing two OL and a RB stacked. On first OL movement to a side all will move that way with the LB shedding the first OL, then the second, then tagging off or wrapping up the RB.", "source": null, "link": null, "is_pleester": true}, {"title": "Cut Defeat", "category": "Run Fits & Block Shedding", "description": "Work from space, can use a bag or a person, but the cut will come fast. End with scoop and score.", "source": null, "link": null, "is_pleester": true}, {"title": "Shed and Tackle", "category": "Run Fits & Block Shedding", "description": "On the one-man sled, start at 5-yard depth while being out-leveraged or straight up. Explode through from a good athletic position shooting arms and hips and shed to the side of the ball carrier (doughnut). Wrap up the doughnut and drive. Modification: have them punch the ball out of the doughnut hole.", "source": null, "link": null, "is_pleester": true}, {"title": "Three OL / Set Edge or Destruct", "category": "Run Fits & Block Shedding", "description": "Three \"OL\" with bags spaced out with one RB behind. Coach tells RB where to go and LB must set edge or destruct in middle.", "source": null, "link": null, "is_pleester": true}, {"title": "Lock & Shed", "category": "Run Fits & Block Shedding", "description": "Start from an offset position on the one-man sled about 5 yards away. Attack the sled downhill and shock and shed. Finish in some sort of tackling drill.", "source": null, "link": null, "is_pleester": true}, {"title": "Flow Drill", "category": "Run Fits & Block Shedding", "description": "5 garbage cans or bags set up. RB can attack a gap or the edge and then cut any way. As RB works laterally, LB will work laterally. \"Slow till you know.\"", "source": "Video: YouTube — H4eEPcJsR84", "link": "https://www.youtube.com/watch?v=H4eEPcJsR84", "is_pleester": true}, {"title": "Half-Line Read", "category": "Run Fits & Block Shedding", "description": "Set up 2 O-linemen and 3 garbage cans with an RB behind. The two O-linemen will get directions from the coach behind LB. If O-line separates and RB presents in hole, go through and tag off. If O-line and RB give OZ look, work over the top with block destruction. If guard pulls, shuffle with pull and attack when appropriate.", "source": "Video: YouTube — CAZQJNDyAmQ", "link": "https://www.youtube.com/watch?v=CAZQJNDyAmQ", "is_pleester": true}, {"title": "Outside Flow", "category": "Run Fits & Block Shedding", "description": "Two LBs line up with good spacing from each other. Coach lines up 5 yards away in the middle of both. Coach gives OZ action to one side — LB to cuts off, LB away shuffles with flow.", "source": null, "link": null, "is_pleester": true}, {"title": "Cloudy to Clear Footwork", "category": "Run Fits & Block Shedding", "description": "Line up with leverage to one side of RB and cones or agile bag behind feet. If RB goes to leverage side, go downhill and fit. If RB goes away, work horizontally until he presents himself.", "source": null, "link": null, "is_pleester": true}, {"title": "Read and Go", "category": "Run Fits & Block Shedding", "description": "OL and RB line up in a line, OL has a shield. Coach tells OL and RB what side to go, LB reacts and sheds block and makes tackle or tags off on RB.", "source": null, "link": null, "is_pleester": true}, {"title": "Read Arc Blocks", "category": "Run Fits & Block Shedding", "description": "TE lines up 5 yards away facing LB. TE will either down-block LB or arc-block him. If LB gets down block he must rip through and fit gap. If LB gets arc block he must spill it tight underneath.", "source": null, "link": null, "is_pleester": true}, {"title": "Play Reaction", "category": "Run Fits & Block Shedding", "description": "Pop feet and shuffle to first cone while reading the QB. QB can either hand off the ball downhill, laterally, or put it high to pass. LB must either react downhill, laterally, or drop to coverage looking for threats.", "source": null, "link": null, "is_pleester": true}, {"title": "6-Cone Box Tackling", "category": "Tackling Technique", "description": "Defenders start from varied angles (or jog in a tight circle before the whistle) and must re-establish proper leverage on a ball carrier inside a six-cone box. Forces leverage under chaos and near-foot-up arrival.", "source": "Source: YouTube — Grant Caserta, LB Coach, Ferris State (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=ScLsreYE-fM", "is_pleester": false}, {"title": "Engaged Tackling Drill", "category": "Tackling Technique", "description": "ILB tackles a ball carrier while still fighting a blocker — the tackles that happen at the LOS. Teaches the LB to finish without fully disengaging, shedding just enough hip/hand to wrap.", "source": "Source: YouTube — Grant Caserta, Ferris State (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=hV7Y9FLGrag", "is_pleester": false}, {"title": "Swoop Footwork / Near-Foot-Up Tackle", "category": "Tackling Technique", "description": "LB mirrors a ball carrier's stutter with his own \"swoop\" — chopping feet to stay balanced on contact while maintaining near-foot-up, Hawk-style fundamentals.", "source": "Source: YouTube — Grant Caserta, Ferris State (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=rtu433aVFUs", "is_pleester": false}, {"title": "Linebacker Hole / 4-Cone Tackling", "category": "Tackling Technique", "description": "Four cones create three \"holes\" simulating I-formation gaps. LB reads which hole a TB attacks, slides laterally, picks the hole, and form-tackles; cutback variation added once base reps are clean.", "source": "Source: Football Tutorials — Linebacker Hole Tackling Drill", "link": "https://www.youtube.com/watch?v=anurBwIrEGM", "is_pleester": false}, {"title": "Hawk / Profile / Compression Tackle Circuit", "category": "Tackling Technique", "description": "The rugby-style system (near-hip, near-shoulder, head outside, wrap and squeeze; Profile aims through near pec; Compression converges two defenders on near-number) that is now the dominant ILB tackling framework across college football. Video shows teaching progressions on bags and donuts.", "source": "Source: Pete Carroll / Rocky Seto — Seahawks Tackling", "link": "https://www.youtube.com/watch?v=cwcq9z04jPU", "is_pleester": false}, {"title": "Every-Day LB Trigger, Track & Tackle", "category": "Tackling Technique", "description": "A combo daily drill where the ILB triggers on a key, tracks the ball carrier (eyes, angle, near-foot), and finishes the tackle — run as a warm-up staple for the LB group.", "source": "Source: Rob Aurich, Asst. Coach, South Dakota", "link": "https://www.youtube.com/watch?v=WncYme0c9JM", "is_pleester": false}, {"title": "Fallback / \"Garbage Can\" Cutback Drill", "category": "Tackling Technique", "description": "Two cans form the box. LB shuffles toward his gap, redirects, and shuffles back across to pursue the cutback with a form finish. Teaches footwork discipline — no cheating, stay square through redirect.", "source": "Source: YouTube — Miami Dolphins Fallback Tackle (USA Football)", "link": "https://www.youtube.com/watch?v=p9njVnS4vDQ", "is_pleester": false}, {"title": "Lane Tackling", "category": "Tackling Technique", "description": "4 bags lined up creating 3 lanes. RB lines up on bags opposite of LB. RB shuffles from side to side as LB shuffles with him. RB picks a lane to try and run through, LB reacts, attacks lane, and tags off.", "source": null, "link": null, "is_pleester": true}, {"title": "Stack and Trigger", "category": "Tackling Technique", "description": "Two bags or cones spaced out in the middle of the RB and LB. On RB’s movement they will shuffle and pick a gap. LB will mirror RB. When he declares a gap, react and trigger.", "source": null, "link": null, "is_pleester": true}, {"title": "X-Drill", "category": "Tackling Technique", "description": "Bags placed in an X with a LB starting at the top of one side (can start on either side). Coach or LB with a bag will start on the bottom in the middle. As the LB shuffles through the bags and begins to go towards the middle, the ball carrier will move to one side or the other. The LB must adjust or stay on same path depending on the ball carrier’s direction and then tag or thud up.", "source": null, "link": null, "is_pleester": true}, {"title": "Reading Behind a Blocker", "category": "Tackling Technique", "description": "Two agile bags set up 5 yards apart as boundaries with a pop-up set up in between — a ball carrier and a LB will line up on either side of one of the agile bags. Both will make their way on an angle towards the pop-up with the ball carrier choosing which way to go around the pop-up. The LB will get to the ball carrier and thud up.", "source": null, "link": null, "is_pleester": true}, {"title": "Pad Level Tracking", "category": "Tackling Technique", "description": "Under the shoot (for an emphasis on pad level), LBs will start on one side of it in the middle with a pop-up placed in the middle of it. The coach will be lined up outside of the shoot with a bag held out in front and begin moving laterally. Upon movement the LB will shuffle through the shoot past the pop-up and wrap up the bag.", "source": null, "link": null, "is_pleester": true}, {"title": "Vice Drill", "category": "Tackling Technique", "description": "Set up cones, bags, or garbage cans as OL. RB will run OZ to one side, LBs must shuffle until RB declares himself. Tag off in a vice keeping good leverage from both LBs on each side.", "source": "Video: YouTube — jXYNCuFlDbo", "link": "https://www.youtube.com/watch?v=jXYNCuFlDbo", "is_pleester": true}, {"title": "Cones + Tackle", "category": "Tackling Technique", "description": "5 cones lined up in a zig-zag orientation with a bag to tackle at the end. Sprint to the first cone, breakdown and shuffle attack to the next, then sprint, then shuffle, then run to tackle.", "source": null, "link": null, "is_pleester": true}, {"title": "Stiff-Arm Defeat", "category": "Tackling Technique", "description": "RB will run in a long angle with the LB tracking and closing with a good base. RB will throw out a stiff arm in which LB will react and swipe the stiff arm and get to a good wrap-up position.", "source": null, "link": null, "is_pleester": true}, {"title": "Pop-Up Strip Sack", "category": "Tackling Technique", "description": "Block defeat blocker or work something on a pad. Secure the pop-up and swipe high to imitate a strip sack. Can be used with a person holding the ball.", "source": null, "link": null, "is_pleester": true}, {"title": "Bag Footwork with Tackle", "category": "Tackling Technique", "description": "3 bags set up on an angle that the LB will shuffle over. One bag set up laterally that the LB will shuffle in front of. One bag set up vertically that the LB will gather feet and chop up through. Tackle doughnut at the end.", "source": null, "link": null, "is_pleester": true}, {"title": "Two-Man Tackling Turnover Drill", "category": "Tackling Technique", "description": "Ball carrier will line up in front of the one-man sled with it being weighed down and run into it simulating a tackler. LB will be lined up on ball carrier's ball-side arm and come in from an angle and strip lawnmower or punch the ball out.", "source": null, "link": null, "is_pleester": true}, {"title": "Bend and Chase", "category": "Tackling Technique", "description": "With cans set up in the middle, the LB will start off to the side. Someone will hold a bag out and run it around the cans; chase and tackle the bag.", "source": null, "link": null, "is_pleester": true}, {"title": "Program Pursuit Drill", "category": "Pursuit & Pad Level", "description": "A 5-minute team drill run at the start of every practice. Scout offense runs a base play on air; defense fits correctly with force and cutback aiming points. Two whistles: when the ball reaches a cone 25 yards downfield, all 11 defenders must sprint into a tight hat-around in 4–6 seconds or it's repeated. Teaches relentless pursuit and proper inside-out tracks for the MIKE.", "source": "Source: YouTube — Mike Kuchar (X&O Labs / USA Football)", "link": "https://www.youtube.com/watch?v=zQ263CkRqHk", "is_pleester": false}, {"title": "Hammer Technique Drill", "category": "Pursuit & Pad Level", "description": "Two-defender rep: force player attacks a 45° blocker with near-foot/near-shoulder, driving the tip of the shoulder pad into the blocker's breastplate with live feet to constrict the gap, while the cutback (ILB fit) defender tracks the backside hip. Builds low pad level, leverage, and spill/force discipline.", "source": "Source: YouTube — Mike Kuchar (USA Football)", "link": "https://www.youtube.com/watch?v=_fek5eScF4Y", "is_pleester": false}, {"title": "Six-Cone Pursuit Drill", "category": "Pursuit & Pad Level", "description": "Six cones at 2.5-yard intervals down each sideline. On the coach's direction cue, every defender — including each inside-LB line — sprints to his assigned cone on the ball side using his position's proper angle. Simple, fast rep of pursuit tempo.", "source": "Source: YouTube — Pursuit Drill", "link": "https://www.youtube.com/watch?v=0Bra-enhgC0", "is_pleester": false}, {"title": "Knowles LB Angle Pursuit", "category": "Pursuit & Pad Level", "description": "Segment of Jim Knowles' Linebacker Fundamentals that drills ILBs on pursuit angles to the ball after the read, emphasizing tracking the inside hip of the ball carrier and finishing with leverage instead of chasing from behind. Paired with his Block Destruction and Muckle progressions.", "source": "Source: YouTube — Jim Knowles, DC, Penn State", "link": "https://www.youtube.com/watch?v=hgeYiVYEYeI", "is_pleester": false}, {"title": "Alabama Inside LB Spring Practice", "category": "Pursuit & Pad Level", "description": "Field video of Alabama's inside linebackers working an individual period — pursuit tracks, shuffle-and-scrape to the ball, finishing angle tackles with low pad level. Useful visual reference for how a Power 5 staff teaches MIKE pursuit.", "source": "Source: Alabama ILB spring practice footage", "link": "https://www.youtube.com/watch?v=rFwlEtAOjnw", "is_pleester": false}, {"title": "LB Movement Mechanics (Bag Progression)", "category": "Footwork & Change of Direction", "description": "Jim Knowles' full bag-circuit for shuffle, plant, and redirect. His coaching point: \"Why do we use bags — there are no bags out there on the field? To me, it's about trusting your feet.\" Forces MIKEs to stay square, eliminate the crossover, and change direction from a controlled base.", "source": "Source: Jim Knowles, DC, Ohio State/Penn State", "link": "https://www.youtube.com/watch?v=JRk8_m0rYhk", "is_pleester": false}, {"title": "LB Stance & Start", "category": "Footwork & Change of Direction", "description": "Companion Knowles piece on the very first move — stance, weight distribution, and the first 1–2 steps that set up every direction change. Emphasizes not reacting to cadence and keeping a balanced base.", "source": "Source: Jim Knowles — James Light Football", "link": "https://www.youtube.com/watch?v=JtC7wR3dtTA", "is_pleester": false}, {"title": "Bag and Cut Work", "category": "Footwork & Change of Direction", "description": "LB shuffles across bags with shoulders square to the LOS while two coaches toss hand-held bags at his feet — he must sink his hips, keep eyes on the coach (not the bags), and pick his feet through the clutter. Core low-pad-level shuffle rep.", "source": "Source: YouTube — Bag and Cut Work (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=ZFbOC2qtQOk", "is_pleester": false}, {"title": "Downhill Shuffle Drill", "category": "Footwork & Change of Direction", "description": "Partner drill: the back jogs/turns/shuffles on cue; the LB mirrors — downhill when the back's shoulders turn, flat/lateral when he squares — finishing with an air tackle. Variations convert to an iso fill or cutback. A daily change-of-direction staple.", "source": "Source: Mike Passerrello — Coach Grabowski blog", "link": "https://www.youtube.com/watch?v=kGHegFiSDOI", "is_pleester": false}, {"title": "Six Off-Season LB Agility Drills (Madden Circle)", "category": "Footwork & Change of Direction", "description": "A six-drill circuit centered on the \"Madden Circle\" — keeping body weight inside a stable base so the LB can change direction without overstepping. Includes bag weight-transfer work, lateral shuffle on guard reads, and a shuffle-and-close finish.", "source": "Source: YouTube — Brandon Butcher, DC/LB, UT Martin (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=OhmmJ7jo7Bw", "is_pleester": false}, {"title": "Kalamazoo College LB Drill Pack (W-Drill, Hip Flip, Weave)", "category": "Footwork & Change of Direction", "description": "Ten movement drills in one PDF: Shuffle-Alley-Shuffle, Flip & Double-Flip on a Line, Crossover Drop & Break, W Drill, Lateral/Linear Hat Dance, Z-Drop, and Lateral & Linear Weave. All stress staying square, quick knee lift, and exaggerated hip flips.", "source": "Source: Kalamazoo College — Position-Specific LB Drills PDF", "link": "https://www.youtube.com/watch?v=u4MLxMUh8Qk", "is_pleester": false}, {"title": "Guard-Read Reaction Drill (Tight Scrape & Fill)", "category": "Footwork & Change of Direction", "description": "ILBs key the guard's pad movement and react with the matching footwork — scrape tight and fill inside the seal on base blocks, shoot under or over on pulls and down blocks — run in both non-contact and live versions.", "source": "Source: YouTube — Brian Nix, HC, Alcoa HS (TN) (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=xpzm2rEXEBM", "is_pleester": false}, {"title": "Footwork Basics (5-Progression)", "category": "Footwork & Change of Direction", "description": "(Prog 1) Line up and on my prayer hands, chop feet. (Prog 2) Hot feet on prayer hands and slow shuffle as I move my hands side to side. (Prog 3) Hot feet, shuffle with hands, turn and run on point. (Prog 4) Hot feet, slow shuffle with hands, on my point attack the cone and break down at it. (Prog 5) Hot feet, slow shuffle with hands, on my point open hips and shuffle back to drop point (cone).", "source": null, "link": null, "is_pleester": true}, {"title": "Footwork Basic (Chop / Step / Shuffle)", "category": "Footwork & Change of Direction", "description": "Start with getting up on toes and quick chop. Then chop feet and step with same-side foot as coach's foot. Then short shuffle to each side as pointed. Then short shuffle to side and finish through.", "source": "Video: YouTube — n6sWYwdPUrE (to 0:50)", "link": "https://www.youtube.com/watch?v=n6sWYwdPUrE", "is_pleester": true}, {"title": "Lateral Shuffle Into Sideways Run", "category": "Footwork & Change of Direction", "description": "Shuffle laterally down line. At designated spot begin to sideways run, keep hips pointed straight. At designated point switch to turn hips and finish through.", "source": "Video: YouTube — n6sWYwdPUrE (0:50–2:00)", "link": "https://www.youtube.com/watch?v=n6sWYwdPUrE", "is_pleester": true}, {"title": "Shuffle React", "category": "Footwork & Change of Direction", "description": "Start with shuffle with coach's hands. Can shuffle side to side. Cones set up in front, laterally, and behind. Go to designated point of cone.", "source": null, "link": null, "is_pleester": true}, {"title": "False Step Elimination", "category": "Footwork & Change of Direction", "description": "Start with an agile bag behind LB's heels. RB starts 5 yards away. LB is an inside-out fitter on both sides. Meet at 2.5 yards and tag off hip.", "source": null, "link": null, "is_pleester": true}, {"title": "Box Drill", "category": "Footwork & Change of Direction", "description": "Cones set up in a box. Start at bottom corner. Advance to opposite corner keeping a good base, shuffle to opposite side, open up and work sideways drop to opposite corner.", "source": null, "link": null, "is_pleester": true}, {"title": "Bag Drill", "category": "Footwork & Change of Direction", "description": "3 bags with the LB starting by straddling middle bag. Left, Right, Left, Right, finish through left. Focus on chest up, eyes up.", "source": null, "link": null, "is_pleester": true}, {"title": "3-Cone", "category": "Footwork & Change of Direction", "description": "Shuffle laterally to first cone, sideways run to second cone, plant and explode on ball.", "source": null, "link": null, "is_pleester": true}, {"title": "Directional Drill", "category": "Footwork & Change of Direction", "description": "LBs will react to coach's point. If pointed back, it will be a backpedal. If pointed side, it will be a shuffle. If pointed back and to the side, it will be a sideways run back. When arms are thrown down, it will be a sprint through.", "source": null, "link": null, "is_pleester": true}, {"title": "Combo Bag Drill (Lateral)", "category": "Footwork & Change of Direction", "description": "With 5 bags lined up, LBs will go over the bags laterally. At the end of the bags, flip hips and go back facing the other way. Explode through at the end.", "source": null, "link": null, "is_pleester": true}, {"title": "Combo Bag Drill (Shuffle / Backpedal)", "category": "Footwork & Change of Direction", "description": "With 5 bags lined up, LBs will shuffle between each bag. At the end of the bags, flip hips to be facing forward and run/backpedal; plant feet at the end and explode through on the cone.", "source": null, "link": null, "is_pleester": true}, {"title": "Lateral Retrace", "category": "Footwork & Change of Direction", "description": "5 bags set up going over them sideways. Once at the end, go back through and finish through with a tackle on the tackling doughnut.", "source": null, "link": null, "is_pleester": true}, {"title": "Carolina Panthers Blitz Progression — Phase 1 \"Get Skinny\"", "category": "Blitzing", "description": "Three-phase rep against a coach with an arm pad. Phase 1: LB rushes head-on, snaps the hips/shoulders sideways to get skinny in the hole without using hands. Phase 2: adds chop, swipe, club or swim vs. the blocker's arm, then re-squares downfield. Builds timing, hip flip, and interior pass-rush moves.", "source": "Source: YouTube — Carolina Panthers / Frank Bartscheck (USA Football)", "link": "https://www.youtube.com/watch?v=UeNOfHPg6do", "is_pleester": false}, {"title": "Duffner LB Blitz Rush Mechanics", "category": "Blitzing", "description": "Mark Duffner walks through stance/start, get-off timing, hand usage, pad level, and finish techniques against guards and centers — the interior pass-rush moves MIKEs need to convert pressure into sacks.", "source": "Source: YouTube — Mark Duffner, Cincinnati Bengals (Glazier Clinic)", "link": "https://www.youtube.com/watch?v=g3dZZuo-370", "is_pleester": false}, {"title": "Delaware Dummy A/B-Gap Blitz Drill", "category": "Blitzing", "description": "ILBs blitz through an A/B-gap chute using a Rogers Delaware Dummy that provides realistic resistance from a simulated center/guard, forcing the LB to dip, rip, and flatten through the gap on the snap.", "source": "Source: Rogers Athletic — New Palestine HS", "link": "https://www.youtube.com/watch?v=p5tlhQIZHa0", "is_pleester": false}, {"title": "Patrick Willis Blitz Fundamentals", "category": "Blitzing", "description": "Former 49ers All-Pro MIKE demonstrates get-off, hip turn to get skinny, and finishing moves through the gap — a clean NFL-level teach of interior LB blitz technique.", "source": "Source: YouTube — Patrick Willis", "link": "https://www.youtube.com/watch?v=fAdKz1DnHf0", "is_pleester": false}, {"title": "Don Brown \"Dr. Blitz\" Library", "category": "Blitzing", "description": "Former Michigan DC Don Brown's full inside-LB blitz menu — V-Cut, Speed-to-Power, Stanley Club/Wipe, Throw-the-Outside-Arm, and \"Get Skinny\" — each a discrete drill. Also includes Blitz Simulators used to rep gap-exchange pressures.", "source": "Source: YouTube — Don Brown", "link": "https://www.youtube.com/watch?v=JW92WJr6P2Y", "is_pleester": false}, {"title": "Double A-Gap \"Addy\" Pressure Reps", "category": "Blitzing", "description": "X&O Labs breakdown of the double A-gap blitz rep mechanics for Mike and Will — both read the turn of the center, one blitzes the A, the other \"dents\" as a rat; a \"Pick\" concept has one LB working near-hip while the other wraps tight like a line game. Drills key read, gap selection, and peel on the RB.", "source": "Source: YouTube — Multiple Pressure Concepts from Double A-Gap Front", "link": "https://www.youtube.com/watch?v=lck-Ab7zIkc", "is_pleester": false}, {"title": "Clear/Cloudy Gap Control", "category": "Key & Diagnose", "description": "Sammy Lawanson's teach — Cloudy means color in the gap (keep scraping); Clear means no color (shoot the gap). Drill work emphasizes patient shuffle, identifying the gap, then changing speeds to \"get across the freeway.\"", "source": "Source: YouTube — Sammy Lawanson, Bowling Green", "link": "https://www.youtube.com/watch?v=1atbUFCBdPE", "is_pleester": false}, {"title": "Four Basic Guard Keys", "category": "Key & Diagnose", "description": "Jerry Campbell's framework for drilling MIKE/WILL read-and-react — four guard-key movements (base/pull/down/pass) paired with stimulus-response techniques (Stay, Slow, Scrape, Speed, Check-Counter). Players verbalize the stimulus during reps to build instinct.", "source": "Source: YouTube — Jerry Campbell", "link": "https://www.youtube.com/watch?v=SlqchINRFSQ", "is_pleester": false}];
+
+// ── TABS ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+    const tab = btn.dataset.tab;
+    ['drills','weekly','glossary'].forEach(t =>
+      document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab)
+    );
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+
+// ── HELPERS ──
+function hexToRgba(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ── DRILLS ──
+let activeFilter = "All", searchQuery = "";
+
+function buildCard(d, idx) {
+  const color = CAT_COLORS[d.category] || "#888";
+  const src = d.source ? d.source.replace(/^(Source:|Video:)\s*/i,'') : '';
+  const btn = d.link
+    ? `<a class="btn-watch" href="${d.link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+        <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Watch</a>`
+    : `<span class="btn-no-video">No Video</span>`;
+  const pb = d.is_pleester ? `<span class="pleester-badge">Zac Pleester</span>` : '';
+  return `<div class="card" onclick="openModal(${idx})" role="button" tabindex="0" aria-label="${d.title.replace(/"/g,'&quot;')}">
+    <div class="card-accent-bar" style="background:${color};"></div>
+    <div class="card-header">
+      <span class="cat-badge" style="background:${hexToRgba(color,.18)};color:${color};">${d.category}</span>${pb}
+    </div>
+    <div class="card-title">${d.title}</div>
+    <div class="card-desc">${d.description || '<em style="opacity:.5">See playbook for setup.</em>'}</div>
+    <div class="card-footer">
+      <span class="card-source" title="${src}">${src}</span>${btn}
+    </div>
+  </div>`;
+}
+
+function render() {
+  const q = searchQuery.toLowerCase();
+  const filtered = DRILLS.map((d,i)=>({d,i})).filter(({d}) =>
+    (activeFilter === "All" || d.category === activeFilter) &&
+    (!q || d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q) || (d.source||'').toLowerCase().includes(q))
+  );
+  document.getElementById('grid').innerHTML = filtered.length
+    ? filtered.map(({d,i}) => buildCard(d,i)).join('')
+    : `<div class="empty"><svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><h3>No drills found</h3><p>Try a different keyword or filter.</p></div>`;
+  document.getElementById('results-count').textContent =
+    filtered.length === DRILLS.length ? `All ${filtered.length} drills` : `${filtered.length} of ${DRILLS.length} drills`;
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeFilter = btn.dataset.cat;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('active'); b.style.cssText='';
+    });
+    btn.classList.add('active');
+    const c = activeFilter === 'All' ? 'var(--orange)' : (CAT_COLORS[activeFilter]||'#888');
+    btn.style.background = c; btn.style.borderColor = c; btn.style.color = '#fff';
+    render();
+  });
+});
+document.getElementById('search').addEventListener('input', e => { searchQuery = e.target.value; render(); });
+
+// ── MODAL ──
+function openModal(idx) {
+  const d = DRILLS[idx];
+  const color = CAT_COLORS[d.category] || '#888';
+  document.getElementById('modal-accent').style.background = color;
+  document.getElementById('modal-badges').innerHTML =
+    `<span class="cat-badge" style="background:${hexToRgba(color,.2)};color:${color};">${d.category}</span>
+     ${d.is_pleester ? '<span class="pleester-badge">Zac Pleester</span>' : ''}`;
+  document.getElementById('modal-title').textContent = d.title;
+  document.getElementById('modal-desc').textContent = d.description || 'Diagram-based drill — see playbook for setup.';
+  const src = d.source ? d.source.replace(/^(Source:|Video:)\s*/i,'') : '';
+  document.getElementById('modal-source-label').textContent = src ? 'Source' : '';
+  document.getElementById('modal-source').textContent = src;
+  document.getElementById('modal-actions').innerHTML = d.link
+    ? `<a class="btn-modal-watch" href="${d.link}" target="_blank" rel="noopener">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Watch on YouTube</a>
+       <button class="btn-modal-close-bottom" onclick="closeModal()">Close</button>`
+    : `<span class="btn-modal-no-video">No Video Available</span>
+       <button class="btn-modal-close-bottom" onclick="closeModal()">Close</button>`;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.activeElement.classList.contains('card')) document.activeElement.click();
+});
+
+// ── GLOSSARY ──
+const GLOSSARY = [
+  {term:"A-Gap",cat:"Gap & Alignment",def:"The gap between the center and the guard, on either side. The MIKE's primary run-fit responsibility in most defensive schemes."},
+  {term:"Arc Block",cat:"Block Types",def:"A TE or H-back releasing outside to block a force defender or ILB. The LB must recognize early and spill tight underneath."},
+  {term:"Avoid Butt Side",cat:"Block Destruction",def:"When a lineman down-blocks toward the LB, the LB rips through and stays tight to the blocker's backside — never drifting upfield past his butt."},
+  {term:"B-Gap",cat:"Gap & Alignment",def:"The gap between the guard and tackle. A second-level read for the MIKE when the A-gap is occupied."},
+  {term:"Backpedal",cat:"Footwork",def:"Opening the hips and retreating backward while keeping shoulders square to the LOS. Used in zone coverage drops and early-down pass reads."},
+  {term:"Button Press",cat:"Block Destruction",def:"A contact technique where the ILB strikes with thumbs up and elbows tight, 'pressing the button' on the blocker's chest before shedding."},
+  {term:"Cloudy / Clear",cat:"Reads & Keys",def:"Cloudy = a defender has color (a body) in the gap — keep scraping. Clear = the gap is open — shoot it. From Sammy Lawanson's framework at Bowling Green."},
+  {term:"Compression Tackle",cat:"Tackling",def:"Two defenders converge on the ball carrier from opposite sides, each targeting the near number. Part of the Seahawks rugby-tackling system."},
+  {term:"Cover 3 Match",cat:"Coverage",def:"A zone coverage where defenders play landmark zones but convert to man-like matching once a route threatens their zone."},
+  {term:"Cross Chop",cat:"Block Destruction",def:"An inside-hand strike used to defeat a down block, knocking the blocker's arm across his body to create separation and allow the LB to cross face."},
+  {term:"Crossover Run",cat:"Footwork",def:"Running at speed by crossing one foot over the other; used in the Speed phase of coverage drops to cover ground to a landmark quickly."},
+  {term:"Cutback",cat:"Run Defense",def:"When a ball carrier reverses field from his initial direction to exploit the backside of a run. MIKEs must stay square and maintain inside leverage."},
+  {term:"Dip and Rip",cat:"Block Destruction",def:"Dip the inside shoulder under the blocker's punch, then rip the inside arm upward through the gap to flatten to the QB on a blitz."},
+  {term:"Down Block",cat:"Block Types",def:"An OL blocking inside toward center, away from the play direction. Signals the LB to shoot the vacated gap (cross face or avoid butt side)."},
+  {term:"Doughnut",cat:"Equipment",def:"A ring-shaped padded tackle target used for form tackle reps. Allows players to practice the wrap-and-squeeze finish without full live contact."},
+  {term:"False Step",cat:"Footwork",def:"An unnecessary initial step away from the intended direction, wasting time and surrendering leverage. Eliminated by the False Step Elimination drill."},
+  {term:"Force Player",cat:"Run Defense",def:"The defender responsible for turning the ball carrier back inside — typically a safety or OLB on the perimeter. The MIKE works inside-out behind him."},
+  {term:"Gap Exchange",cat:"Blitzing",def:"A defensive line game or LB stunt where two players swap gap responsibilities post-snap to confuse the offensive line's blocking assignments."},
+  {term:"Guard Key",cat:"Reads & Keys",def:"The guard's initial movement used by the MIKE to diagnose the play: four movements — base block, pull, down block, pass set. The core pre-snap to post-snap read."},
+  {term:"Hawk Tackle",cat:"Tackling",def:"Rugby-inspired tackle method: near-hip aiming point, near-shoulder contact, head outside the frame, wrap and squeeze. Popularized by Pete Carroll and Rocky Seto at Seattle."},
+  {term:"Hip Flip",cat:"Footwork",def:"Rotating the hips 180° to convert from shuffle/backpedal to a sprint in the opposite direction. Critical for zone drops, pursuit angles, and blitz gets."},
+  {term:"Hot Feet",cat:"Footwork",def:"Rapid, short steps in place keeping the LB balanced and ready to explode in any direction. Used as an activation cue before a read or reaction movement."},
+  {term:"ILB",cat:"Positions",def:"Inside Linebacker. Plays in the interior of the defense, typically in a 30- or 40-tech alignment. Responsible for gap control, pass drops, and blitz lanes."},
+  {term:"Inside-Out Fit",cat:"Run Defense",def:"Approaching the ball carrier from inside his trajectory, forcing him to bounce outside toward the force player. The MIKE's fundamental tracking angle on all downhill runs."},
+  {term:"ISO (Isolation)",cat:"Run Concepts",def:"A straight-ahead run with a fullback leading through the hole to block the MIKE. The LB presses the fit, takes on the blocker, and makes the tackle."},
+  {term:"Landmark",cat:"Coverage",def:"A pre-determined spot the LB drops to in zone coverage. Consistent landmark depth creates spacing discipline and prevents double-covering routes."},
+  {term:"Leverage",cat:"Fundamentals",def:"The positional advantage of keeping your body below and inside an opponent's frame, enabling better power, control, and the ability to shed."},
+  {term:"Lock",cat:"Block Destruction",def:"The second phase of Shock-Lock-Shed — after shocking the blocker, the LB extends arms fully, locking out the blocker to keep pads away from his body."},
+  {term:"Madden Circle",cat:"Footwork",def:"Training concept from Brandon Butcher (UT Martin): keep the LB's center of mass inside a tight imaginary circle so he can change direction without overstepping."},
+  {term:"MIKE",cat:"Positions",def:"The middle linebacker — the defensive quarterback. Calls front alignments, gap assignments, and coverage checks. Typically the most physically complete ILB on the field."},
+  {term:"Near-Foot-Up",cat:"Tackling",def:"Arriving at the ball carrier with the foot nearest to him stepped forward, creating proper leverage and eliminating the weak far-shoulder tackle attempt."},
+  {term:"OZ (Outside Zone)",cat:"Run Concepts",def:"A stretch run displacing the defense laterally. The ILB must scrape flat to play-side and maintain the cutback lane — never over-pursue."},
+  {term:"Pad Level",cat:"Fundamentals",def:"The height of the defender's shoulder pads during contact. Low pad level creates leverage; high pad level is exploited by blockers. 'The low man wins.'"},
+  {term:"Pattern Match",cat:"Coverage",def:"A hybrid zone-man concept where defenders play zone principles but convert to man coverage based on route distributions entering their zone."},
+  {term:"Profile Tackle",cat:"Tackling",def:"Aiming through the ball carrier's near pec muscle as the contact point, ensuring the head stays outside the frame. Part of the Seahawks system."},
+  {term:"Pull (Guard Pull)",cat:"Reads & Keys",def:"When the guard kicks out laterally to lead block. The MIKE shuffles with the pull direction, then attacks downhill once the ball carrier declares a gap."},
+  {term:"Pursuit Angle",cat:"Run Defense",def:"The path a defender takes to intersect the ball carrier, calculated from the carrier's speed and trajectory. MIKEs track the inside hip, not the ball."},
+  {term:"Rat",cat:"Blitzing",def:"In a double A-gap pressure, the LB who 'dents' rather than fully blitzes — he threatens the gap to hold the center, then peels to the RB on a check-release."},
+  {term:"Re-Route",cat:"Coverage",def:"Using body positioning or hands to redirect a receiver's release near the LOS, disrupting timing and forcing the QB to move off his primary read."},
+  {term:"Rip",cat:"Block Destruction",def:"A shedding technique where the inside arm drives upward through the blocker's arm, rotating the LB past the block toward the ball carrier."},
+  {term:"Scrape",cat:"Run Defense",def:"Lateral movement by the LB behind the defensive line — moving horizontally to keep proper leverage before attacking downhill on the ball carrier."},
+  {term:"Shed",cat:"Block Destruction",def:"The final phase of block destruction: disengaging from the blocker's control to pursue the ball. Can be a rip, swim, push-pull, or spin."},
+  {term:"SLICE / Wall",cat:"Coverage",def:"Technique for the MIKE (or inside safety) to intercept a #2 vertical stem — slicing through the route path, walling off the receiver, then redirecting to the next threat."},
+  {term:"Slow Till You Know",cat:"Reads & Keys",def:"Coaching phrase from Pleester's Flow Drill: the LB should not commit to a gap until the ball carrier's cut is certain — patience prevents over-pursuit."},
+  {term:"Spill",cat:"Run Defense",def:"Forcing the ball carrier outside by attacking the near blocker inside-out, 'spilling' the run to the force player or sideline rather than letting it cut back."},
+  {term:"Step-Replace",cat:"Coverage",def:"Re-routing technique: the LB steps with his inside foot and places his body between the receiver and QB, walling off crossers without using hands."},
+  {term:"30-Tech",cat:"Gap & Alignment",def:"ILB alignment in the B-gap, shaded to the outside shoulder of the guard. Common base alignment for MIKE linebackers in 4-2-5 or 3-4 structures."},
+  {term:"Vice",cat:"Tackling",def:"Two-LB finish where both converge from opposite sides with inside leverage, squeezing the ball carrier for a secure group stop (Vice Drill — Pleester)."},
+  {term:"Wall Drop",cat:"Coverage",def:"Coverage technique and drill (Pleester): the LB drops to a cone landmark, walls off any route entering his zone, and keeps eyes on the QB's platform throughout."},
+  {term:"WILL",cat:"Positions",def:"Weakside linebacker. Typically faster and lighter than the MIKE, responsible for cutback fits, cross-fills, and underneath coverage on the weakside."},
+  {term:"Zone Drop",cat:"Coverage",def:"Pre-snap coverage movement: LB opens hips, drops to a designated landmark depth, and plays zone with eyes on the QB's platform to break on the throw."},
+];
+
+function renderGlossary(q='') {
+  const fl = q.toLowerCase();
+  const filtered = GLOSSARY.filter(g => !fl || g.term.toLowerCase().includes(fl) || g.def.toLowerCase().includes(fl) || g.cat.toLowerCase().includes(fl));
+  const byLetter = {};
+  filtered.forEach(g => { const l=g.term[0].toUpperCase(); (byLetter[l]||(byLetter[l]=[])).push(g); });
+  const letters = Object.keys(byLetter).sort();
+  document.getElementById('glossary-list').innerHTML = letters.length
+    ? letters.map(l =>
+        `<div class="glossary-section"><div class="glossary-letter">${l}</div><div class="glossary-terms">${
+          byLetter[l].sort((a,b)=>a.term.localeCompare(b.term)).map(g =>
+            `<div class="glossary-term">
+              <div class="term-name">${g.term}</div>
+              <span class="term-category">${g.cat}</span>
+              <div class="term-def">${g.def}</div>
+            </div>`
+          ).join('')
+        }</div></div>`
+      ).join('')
+    : '<div style="text-align:center;padding:40px;color:var(--text-dim);">No terms found.</div>';
+}
+document.getElementById('glossary-search').addEventListener('input', e => renderGlossary(e.target.value));
+
+render();
+renderGlossary();
+</script>
+</body>
+</html>
